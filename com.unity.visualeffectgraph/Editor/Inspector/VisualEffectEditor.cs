@@ -190,99 +190,74 @@ namespace UnityEditor.VFX
             return null;
         }
 
-        void DisplayProperty(ref VFXParameterInfo parameter, SerializedProperty overrideProperty, SerializedProperty property)
+        static void DisplayProperty(ref VFXParameterInfo parameter, GUIContent nameContent, SerializedProperty overridenProperty, SerializedProperty valueProperty, bool animated)
         {
             EditorGUILayout.BeginHorizontal();
 
-            GUIContent nameContent = GetGUIContent(parameter.name, parameter.tooltip);
-
-            EditorGUI.BeginChangeCheck();
-            bool result = EditorGUILayout.Toggle(overrideProperty.hasMultipleDifferentValues ? false : overrideProperty.boolValue, overrideProperty.hasMultipleDifferentValues ? Styles.toggleMixedStyle : Styles.toggleStyle, GUILayout.Width(overrideWidth));
-            if (EditorGUI.EndChangeCheck())
+            Color previousColor = GUI.color;
+            if (animated)
             {
-                overrideProperty.boolValue = result;
+                GUI.color = AnimationMode.animatedPropertyColor;
             }
 
-            SerializedProperty originalProperty = property;
-
-            if (!overrideProperty.boolValue)
+            overridenProperty.boolValue = EditorGUILayout.Toggle(overridenProperty.hasMultipleDifferentValues ? false : overridenProperty.boolValue, overridenProperty.hasMultipleDifferentValues ? Styles.toggleMixedStyle : Styles.toggleStyle, GUILayout.Width(overrideWidth));
+            if (parameter.min != Mathf.NegativeInfinity && parameter.max != Mathf.Infinity)
             {
-                s_FakeObjectSerializedCache.Update();
-                property = s_FakeObjectSerializedCache.FindProperty(originalProperty.propertyPath);
-                if (property != null)
-                {
-                    SetObjectValue(property,parameter.defaultValue.Get());
-                }
-            }
-
-            if (property != null)
-            {
-                EditorGUI.BeginChangeCheck();
-                if (parameter.min != Mathf.NegativeInfinity && parameter.max != Mathf.Infinity)
-                {
-                    if (property.propertyType == SerializedPropertyType.Float)
-                        EditorGUILayout.Slider(property, parameter.min, parameter.max, nameContent);
-                    else
-                        EditorGUILayout.IntSlider(property, (int)parameter.min, (int)parameter.max, nameContent);
-                }
-                else if (parameter.realType == typeof(Color).Name)
-                {
-                    Vector4 vVal = property.vector4Value;
-                    Color c = new Color(vVal.x, vVal.y, vVal.z, vVal.w);
-                    c = EditorGUILayout.ColorField(nameContent, c, true, true, true);
-
-                    if (GUI.changed)
-                        property.vector4Value = new Vector4(c.r, c.g, c.b, c.a);
-                }
-                else if (parameter.realType == typeof(Gradient).Name)
-                {
-                    Gradient newGradient = EditorGUILayout.GradientField(nameContent, property.gradientValue, true);
-
-                    if (GUI.changed)
-                        property.gradientValue = newGradient;
-                }
-                else if (property.propertyType == SerializedPropertyType.Vector4)
-                {
-                    var oldVal = property.vector4Value;
-                    var newVal = EditorGUILayout.Vector4Field(nameContent, oldVal);
-                    if (oldVal.x != newVal.x || oldVal.y != newVal.y || oldVal.z != newVal.z || oldVal.w != newVal.w)
-                        property.vector4Value = newVal;
-                }
-                else if (property.propertyType == SerializedPropertyType.ObjectReference)
-                {
-                    Type objTyp = typeof(UnityObject);
-                    if (!string.IsNullOrEmpty(parameter.realType))
-                    {
-                        if (parameter.realType.StartsWith("Texture") || parameter.realType.StartsWith("Cubemap"))
-                        {
-                            objTyp = typeof(Texture);
-                        }
-                        else if (parameter.realType == "Mesh")
-                        {
-                            objTyp = typeof(Mesh);
-                        }
-                    }
-                    Rect r = EditorGUILayout.GetControlRect(true, EditorGUI.kSingleLineHeight, EditorStyles.objectField, null);
-                    EditorGUI.ObjectField(r, property, objTyp, nameContent);
-                }
+                if (valueProperty.propertyType == SerializedPropertyType.Float)
+                    EditorGUILayout.Slider(valueProperty, parameter.min, parameter.max, nameContent);
                 else
+                    EditorGUILayout.IntSlider(valueProperty, (int)parameter.min, (int)parameter.max, nameContent);
+            }
+            else if (parameter.realType == typeof(Color).Name)
+            {
+                Vector4 vVal = valueProperty.vector4Value;
+                Color c = new Color(vVal.x, vVal.y, vVal.z, vVal.w);
+                c = EditorGUILayout.ColorField(nameContent, c, true, true, true);
+
+                if (GUI.changed)
+                    valueProperty.vector4Value = new Vector4(c.r, c.g, c.b, c.a);
+            }
+            else if (parameter.realType == typeof(Gradient).Name)
+            {
+                Gradient newGradient = EditorGUILayout.GradientField(nameContent, valueProperty.gradientValue, true);
+
+                if (GUI.changed)
+                    valueProperty.gradientValue = newGradient;
+            }
+            else if (valueProperty.propertyType == SerializedPropertyType.Vector4)
+            {
+                var oldVal = valueProperty.vector4Value;
+                var newVal = EditorGUILayout.Vector4Field(nameContent, oldVal);
+                if (oldVal.x != newVal.x || oldVal.y != newVal.y || oldVal.z != newVal.z || oldVal.w != newVal.w)
+                    valueProperty.vector4Value = newVal;
+            }
+            else if (valueProperty.propertyType == SerializedPropertyType.ObjectReference)
+            {
+                Type objTyp = typeof(UnityObject);
+                if (!string.IsNullOrEmpty(parameter.realType))
                 {
-                    EditorGUILayout.PropertyField(property, nameContent, true);
-                }
-                if (EditorGUI.EndChangeCheck())
-                {
-                    if (overrideProperty.boolValue == false)
+                    if (parameter.realType.StartsWith("Texture") || parameter.realType.StartsWith("Cubemap"))
                     {
-                        if (originalProperty.propertyType == property.propertyType)
-                        {
-                            SetObjectValue(originalProperty, GetObjectValue(property));
-                        }
-                        overrideProperty.boolValue = true;
+                        objTyp = typeof(Texture);
+                    }
+                    else if (parameter.realType == "Mesh")
+                    {
+                        objTyp = typeof(Mesh);
                     }
                 }
+                Rect r = EditorGUILayout.GetControlRect(true, EditorGUI.kSingleLineHeight, EditorStyles.objectField, null);
+                EditorGUI.ObjectField(r, valueProperty, objTyp, nameContent);
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(valueProperty, nameContent, true);
             }
 
-            serializedObject.ApplyModifiedProperties();
+            if (animated)
+            {
+                GUI.color = previousColor;
+            }
+
             EditorGUILayout.EndHorizontal();
         }
 
@@ -660,44 +635,79 @@ namespace UnityEditor.VFX
                         else if (!ignoreUntilNextCat)
                         {
                             var vfxField = m_VFXPropertySheet.FindPropertyRelative(parameter.sheetType + ".m_Array");
-                            SerializedProperty property = null;
+                            SerializedProperty sourceProperty = null;
                             if (vfxField != null)
                             {
                                 for (int i = 0; i < vfxField.arraySize; ++i)
                                 {
-                                    property = vfxField.GetArrayElementAtIndex(i);
-                                    var nameProperty = property.FindPropertyRelative("m_Name").stringValue;
+                                    sourceProperty = vfxField.GetArrayElementAtIndex(i);
+                                    var nameProperty = sourceProperty.FindPropertyRelative("m_Name").stringValue;
                                     if (nameProperty == parameter.path)
                                     {
                                         break;
                                     }
-
-                                    property = null;
+                                    sourceProperty = null;
                                 }
                             }
 
-                            if (property != null)
+                            bool wasNewProperty = false;
+                            bool wasNotOverriddenProperty = false;
+
+                            SerializedProperty actualDisplayedPropertyValue = null;
+                            SerializedProperty actualDisplayedPropertyOverridden = null;
+                            if (sourceProperty == null)
                             {
-                                SerializedProperty overrideProperty = property.FindPropertyRelative("m_Overridden");
-                                property = property.FindPropertyRelative("m_Value");
-                                string firstpropName = property.name;
-
-                                Color previousColor = GUI.color;
-                                var animated = AnimationMode.IsPropertyAnimated(target, property.propertyPath);
-                                if (animated)
+                                wasNewProperty = true;
+                                //TODOPAUL add new property in lazy on fake object !
+                            }
+                            else
+                            {
+                                actualDisplayedPropertyOverridden = sourceProperty.FindPropertyRelative("m_Overridden");
+                                actualDisplayedPropertyValue = sourceProperty.FindPropertyRelative("m_Value");
+                                if (!actualDisplayedPropertyOverridden.boolValue)
                                 {
-                                    GUI.color = AnimationMode.animatedPropertyColor;
+                                    s_FakeObjectSerializedCache.Update();
+
+                                    actualDisplayedPropertyOverridden = s_FakeObjectSerializedCache.FindProperty(actualDisplayedPropertyOverridden.propertyPath);
+                                    actualDisplayedPropertyValue = s_FakeObjectSerializedCache.FindProperty(actualDisplayedPropertyValue.propertyPath);
+                                    SetObjectValue(actualDisplayedPropertyValue, parameter.defaultValue.Get());
+
+                                    wasNotOverriddenProperty = true;
                                 }
+                            }
 
-                                DisplayProperty(ref parameter, overrideProperty, property);
-
-                                if (animated)
+                            if (sourceProperty != null) //TODOPAUL remove this test once we handle wasNewProperty
+                            {
+                                GUIContent nameContent = GetGUIContent(parameter.name, parameter.tooltip);
+                                EditorGUI.BeginChangeCheck();
+                                DisplayProperty(ref parameter, nameContent, actualDisplayedPropertyOverridden, actualDisplayedPropertyValue, AnimationMode.IsPropertyAnimated(target, actualDisplayedPropertyValue.propertyPath));
+                                if (EditorGUI.EndChangeCheck())
                                 {
-                                    GUI.color = previousColor;
+                                    if (wasNewProperty)
+                                    {
+                                        //TODOPAUL add new entry in actual serial object !
+                                    }
+                                    else if (wasNotOverriddenProperty)
+                                    {
+                                        if (actualDisplayedPropertyOverridden.boolValue)
+                                        {
+                                            //The check box has simply been toggle, we should not restore value from asset but simply change overridden state
+                                            sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
+                                        }
+                                        else
+                                        {
+                                            //The value has been directly changed, change overridden state and recopy new value
+                                            SetObjectValue(sourceProperty.FindPropertyRelative("m_Value"), actualDisplayedPropertyValue);
+                                            sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
+                                        }
+                                    }
+                                    else // wasNewProperty == wasNotOverriddenProperty == false => nothing todo
+                                    {
+                                    }
+                                    serializedObject.ApplyModifiedProperties();
                                 }
                             }
                         }
-
                         EditorGUI.indentLevel = stack.Count;
                     }
                 }
