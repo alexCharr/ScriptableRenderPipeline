@@ -134,62 +134,6 @@ namespace UnityEditor.VFX
 
         protected const float overrideWidth = 16;
 
-        SerializedProperty GetFakeProperty(ref VFXParameterInfo parameter)
-        {
-            if (parameter.defaultValue == null)
-                return null;
-            Type type = parameter.defaultValue.type;
-            if (type == null)
-                return null;
-
-            if (typeof(float) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aFloat");
-            }
-            else if (typeof(Vector2) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aVector2");
-            }
-            else if (typeof(Vector3) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aVector3");
-            }
-            else if (typeof(Vector4) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aVector4");
-            }
-            else if (typeof(Color) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aColor");
-            }
-            else if (typeof(Gradient) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aGradient");
-            }
-            else if (typeof(AnimationCurve) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("anAnimationCurve");
-            }
-            else if (typeof(UnityObject).IsAssignableFrom(type))
-            {
-                return s_FakeObjectSerializedCache.FindProperty("anObject");
-            }
-            else if (typeof(int) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("anInt");
-            }
-            else if (typeof(uint) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("anUInt");
-            }
-            else if (typeof(bool) == type)
-            {
-                return s_FakeObjectSerializedCache.FindProperty("aBool");
-            }
-
-            return null;
-        }
-
         static void DisplayProperty(ref VFXParameterInfo parameter, GUIContent nameContent, SerializedProperty overridenProperty, SerializedProperty valueProperty, bool animated)
         {
             EditorGUILayout.BeginHorizontal();
