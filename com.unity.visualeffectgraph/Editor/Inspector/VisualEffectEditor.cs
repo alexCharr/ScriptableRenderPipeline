@@ -519,7 +519,7 @@ namespace UnityEditor.VFX
                 if (m_graph.m_ParameterInfo != null)
                 {
                     ShowHeader(Contents.headerParameters, false, false, false, false);
-                    List<int> stack = new List<int>();
+                    var stack = new List<int>();
                     int currentCount = m_graph.m_ParameterInfo.Length;
                     if (currentCount == 0)
                     {
@@ -533,7 +533,6 @@ namespace UnityEditor.VFX
                         --currentCount;
 
                         var parameter = param;
-
                         if (parameter.descendantCount > 0)
                         {
                             stack.Add(currentCount);
@@ -578,22 +577,21 @@ namespace UnityEditor.VFX
                         }
                         else if (!ignoreUntilNextCat)
                         {
-                            var vfxField = m_VFXPropertySheet.FindPropertyRelative(parameter.sheetType + ".m_Array");
+                            //< Try find source property
+                            var sourceVfxField = m_VFXPropertySheet.FindPropertyRelative(parameter.sheetType + ".m_Array");
                             SerializedProperty sourceProperty = null;
-                            if (vfxField != null)
+                            for (int i = 0; i < sourceVfxField.arraySize; ++i)
                             {
-                                for (int i = 0; i < vfxField.arraySize; ++i)
+                                sourceProperty = sourceVfxField.GetArrayElementAtIndex(i);
+                                var nameProperty = sourceProperty.FindPropertyRelative("m_Name").stringValue;
+                                if (nameProperty == parameter.path)
                                 {
-                                    sourceProperty = vfxField.GetArrayElementAtIndex(i);
-                                    var nameProperty = sourceProperty.FindPropertyRelative("m_Name").stringValue;
-                                    if (nameProperty == parameter.path)
-                                    {
-                                        break;
-                                    }
-                                    sourceProperty = null;
+                                    break;
                                 }
+                                sourceProperty = null;
                             }
 
+                            //< Prepare potential indirection
                             bool wasNewProperty = false;
                             bool wasNotOverriddenProperty = false;
 
@@ -601,8 +599,17 @@ namespace UnityEditor.VFX
                             SerializedProperty actualDisplayedPropertyOverridden = null;
                             if (sourceProperty == null)
                             {
+                                s_FakeObjectSerializedCache.Update();
+                                var fakeField = s_FakeObjectSerializedCache.FindProperty("m_PropertySheet." + parameter.sheetType + ".m_Array");
+                                fakeField.InsertArrayElementAtIndex(fakeField.arraySize);
+                                var newFakeEntry = fakeField.GetArrayElementAtIndex(fakeField.arraySize - 1);
+                                newFakeEntry.FindPropertyRelative("m_Name").stringValue = param.path;
+
+                                actualDisplayedPropertyOverridden = newFakeEntry.FindPropertyRelative("m_Overridden");
+                                actualDisplayedPropertyValue = newFakeEntry.FindPropertyRelative("m_Value");
+                                SetObjectValue(actualDisplayedPropertyValue, parameter.defaultValue.Get());
+
                                 wasNewProperty = true;
-                                //TODOPAUL add new property in lazy on fake object !
                             }
                             else
                             {
@@ -620,36 +627,40 @@ namespace UnityEditor.VFX
                                 }
                             }
 
-                            if (sourceProperty != null) //TODOPAUL remove this test once we handle wasNewProperty
+                            //< Actual display
+                            GUIContent nameContent = GetGUIContent(parameter.name, parameter.tooltip);
+                            EditorGUI.BeginChangeCheck();
+                            DisplayProperty(ref parameter, nameContent, actualDisplayedPropertyOverridden, actualDisplayedPropertyValue, AnimationMode.IsPropertyAnimated(target, actualDisplayedPropertyValue.propertyPath));
+                            if (EditorGUI.EndChangeCheck())
                             {
-                                GUIContent nameContent = GetGUIContent(parameter.name, parameter.tooltip);
-                                EditorGUI.BeginChangeCheck();
-                                DisplayProperty(ref parameter, nameContent, actualDisplayedPropertyOverridden, actualDisplayedPropertyValue, AnimationMode.IsPropertyAnimated(target, actualDisplayedPropertyValue.propertyPath));
-                                if (EditorGUI.EndChangeCheck())
+                                if (wasNewProperty)
                                 {
-                                    if (wasNewProperty)
-                                    {
-                                        //TODOPAUL add new entry in actual serial object !
-                                    }
-                                    else if (wasNotOverriddenProperty)
-                                    {
-                                        if (actualDisplayedPropertyOverridden.boolValue)
-                                        {
-                                            //The check box has simply been toggle, we should not restore value from asset but simply change overridden state
-                                            sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
-                                        }
-                                        else
-                                        {
-                                            //The value has been directly changed, change overridden state and recopy new value
-                                            SetObjectValue(sourceProperty.FindPropertyRelative("m_Value"), actualDisplayedPropertyValue);
-                                            sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
-                                        }
-                                    }
-                                    else // wasNewProperty == wasNotOverriddenProperty == false => nothing todo
-                                    {
-                                    }
-                                    serializedObject.ApplyModifiedProperties();
+                                    //We start editing a new exposed value which wasn't stored in this Visual Effect Component
+                                    sourceVfxField.InsertArrayElementAtIndex(sourceVfxField.arraySize);
+                                    var newEntry = sourceVfxField.GetArrayElementAtIndex(sourceVfxField.arraySize - 1);
+
+                                    newEntry.FindPropertyRelative("m_Overridden").boolValue = actualDisplayedPropertyOverridden.boolValue;
+                                    SetObjectValue(newEntry.FindPropertyRelative("m_Value"), GetObjectValue(actualDisplayedPropertyValue));
+                                    newEntry.FindPropertyRelative("m_Name").stringValue = param.path;
                                 }
+                                else if (wasNotOverriddenProperty)
+                                {
+                                    if (actualDisplayedPropertyOverridden.boolValue)
+                                    {
+                                        //The check box has simply been toggle, we should not restore value from asset but simply change overridden state
+                                        sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
+                                    }
+                                    else
+                                    {
+                                        //The value has been directly changed, change overridden state and recopy new value
+                                        SetObjectValue(sourceProperty.FindPropertyRelative("m_Value"), GetObjectValue(actualDisplayedPropertyValue));
+                                        sourceProperty.FindPropertyRelative("m_Overridden").boolValue = true;
+                                    }
+                                }
+                                else //wasNewProperty == wasNotOverriddenProperty == false => there isn't any additionnal behavior needed, we are already using real serialized property
+                                {
+                                }
+                                serializedObject.ApplyModifiedProperties();
                             }
                         }
                         EditorGUI.indentLevel = stack.Count;
