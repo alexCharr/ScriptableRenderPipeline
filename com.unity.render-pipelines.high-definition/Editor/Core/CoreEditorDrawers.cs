@@ -4,7 +4,7 @@ using UnityEditor.AnimatedValues;
 using UnityEditor.Rendering;
 using UnityEngine;
 
-namespace UnityEditor.Experimental.Rendering
+namespace UnityEditor.Experimental.Rendering.HDPipeline
 {
     [Flags]
     public enum FoldoutOption
