@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering.LightweightPipeline;
+using UnityEditor.Rendering;
 
 namespace UnityEditor.Experimental.Rendering.LightweightPipeline
 {
