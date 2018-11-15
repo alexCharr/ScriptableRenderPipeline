@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fixed mettalic value not converted correctly in upgrader tool
 - Fixed volumetric not rendering in reflection probe
 - Fixed a crash when setting a zero sized viewport
+- Fixed camera physic parameter that wasn't display
 
 ### Changed
 - Renamed "Line" shaped lights to "Tube" light
