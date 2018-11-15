@@ -12,6 +12,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
         {
             m_SerializedHDRenderPipeline = new SerializedHDRenderPipelineAsset(serializedObject);
             m_HDRenderPipelineUI.Reset(m_SerializedHDRenderPipeline, Repaint);
+
+            HDRenderPipelineUI.Init(m_HDRenderPipelineUI, m_SerializedHDRenderPipeline, this);
         }
 
         public override void OnInspectorGUI()
